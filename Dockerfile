@@ -6,6 +6,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /build/rvllm
 COPY rvllm /build/rvllm
+RUN bash kernels/build.sh sm_80
 RUN cargo build --release --features cuda -p rvllm-server
 
 FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04 AS runtime
