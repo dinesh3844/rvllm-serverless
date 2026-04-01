@@ -13,13 +13,15 @@ FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04 AS runtime
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-venv \
     libssl3t64 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY rvLLM-serverless/builder/requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/python -m pip install --upgrade pip && \
+    /opt/venv/bin/python -m pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY --from=rvllm-builder /build/rvllm/target/release/rvllm /usr/local/bin/rvllm
 COPY --from=rvllm-builder /build/rvllm/kernels/*.ptx /usr/local/share/rvllm/kernels/
@@ -30,6 +32,7 @@ ARG MODEL_REVISION="main"
 ARG MODEL_DIR="/models/default"
 
 ENV PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:${PATH} \
     RVLLM_KERNEL_DIR=/usr/local/share/rvllm/kernels \
     HF_HOME=/runpod-volume/huggingface \
     HUGGINGFACE_HUB_CACHE=/runpod-volume/huggingface/hub \

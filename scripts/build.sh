@@ -11,6 +11,7 @@ MODEL_REVISION="main"
 BAKE_MODEL="false"
 PUSH_IMAGE="false"
 DRY_RUN="false"
+PLATFORM="linux/amd64"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,6 +38,10 @@ while [[ $# -gt 0 ]]; do
     --dry-run)
       DRY_RUN="true"
       shift
+      ;;
+    --platform)
+      PLATFORM="$2"
+      shift 2
       ;;
     *)
       echo "unknown argument: $1" >&2
@@ -68,7 +73,8 @@ cp -R "${REPO_DIR}/." "${BUILD_ROOT}/rvLLM-serverless/"
 cp -R "${WORKSPACE_DIR}/rvllm/." "${BUILD_ROOT}/rvllm/"
 
 BUILD_CMD=(
-  docker build
+  docker buildx build
+  --platform "${PLATFORM}"
   -f "${BUILD_ROOT}/rvLLM-serverless/Dockerfile"
   -t "${TAG}"
   --build-arg "BAKE_MODEL=${BAKE_MODEL}"
@@ -78,6 +84,12 @@ BUILD_CMD=(
 
 if [[ -n "${HF_TOKEN:-}" ]]; then
   BUILD_CMD+=(--secret id=HF_TOKEN,env=HF_TOKEN)
+fi
+
+if [[ "${PUSH_IMAGE}" == "true" ]]; then
+  BUILD_CMD+=(--push)
+else
+  BUILD_CMD+=(--load)
 fi
 
 BUILD_CMD+=("${BUILD_ROOT}")
@@ -91,7 +103,3 @@ if [[ "${DRY_RUN}" == "true" ]]; then
 fi
 
 "${BUILD_CMD[@]}"
-
-if [[ "${PUSH_IMAGE}" == "true" ]]; then
-  docker push "${TAG}"
-fi
